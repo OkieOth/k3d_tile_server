@@ -1,0 +1,5 @@
+postgresqlUsername: osm_db
+postgresqlPassword: osmRocks!
+postgresqlDatabase: osm_db
+persistence:
+  existingClaim: postgis-pv-claim
