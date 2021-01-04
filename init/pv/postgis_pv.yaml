@@ -1,20 +1,20 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: tiles-pv
+  name: postgis-pv
 spec:
   capacity:
     storage: 100Gi
   volumeMode: Filesystem
   accessModes:
   - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Delete
+  persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: /tiles
+    path: /postgis
   claimRef:
     namespace: default
-    name: tiles-pv-claim
+    name: postgis-pv-claim
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -22,4 +22,4 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - k3d-osmtest-agent-1
+          - k3d-osmtest-agent-0

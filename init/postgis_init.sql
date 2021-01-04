@@ -1,4 +1,0 @@
-CREATE DATABASE osm_db;
-\c osm_db;
-CREATE EXTENSION postgis;
-CREATE EXTENSION hstore;

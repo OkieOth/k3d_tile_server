@@ -1,5 +1,5 @@
-postgresqlUsername: osm_db
-postgresqlPassword: osmRocks!
+existingSecret: postgres-user-pass
+postgresqlPassword: Geheim999
 postgresqlDatabase: osm_db
 persistence:
   existingClaim: postgis-pv-claim

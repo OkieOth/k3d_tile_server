@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgis-init
+spec:
+  template:
+    spec:
+      containers:
+      - name: postgis-init-container
+        image: docker.io/bitnami/postgresql:11.9.0-debian-10-r48
+        command: ["psql", "--host", "osm-db-postgresql", "-U", "postgres", "-d", "osm_db", "-p", "5432", "-f", "/init/postgis_init.sql"]
+      restartPolicy: Never
+  backoffLimit: 4
