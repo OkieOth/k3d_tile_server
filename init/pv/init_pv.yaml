@@ -12,6 +12,9 @@ spec:
   storageClassName: local-storage
   local:
     path: /init
+  claimRef:
+    namespace: default
+    name: init-pv-claim
   nodeAffinity:
     required:
       nodeSelectorTerms:

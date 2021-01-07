@@ -25,6 +25,11 @@ if ! kubectl apply -f $basePath/init/pv/tiles_pv.yaml; then
     exit 1
 fi
 
+if ! kubectl apply -f $basePath/init/pv/init_pv.yaml; then
+    echo "error while create init volume"
+    exit 1
+fi
+
 if ! kubectl apply -f $basePath/init/pvc/postgis_pvc.yaml; then
     echo "error while create postgis pvc"
     exit 1
@@ -32,6 +37,11 @@ fi
 
 if ! kubectl apply -f $basePath/init/pvc/tiles_pvc.yaml; then
     echo "error while create tiles pvc"
+    exit 1
+fi
+
+if ! kubectl apply -f $basePath/init/pvc/init_pvc.yaml; then
+    echo "error while create init pvc"
     exit 1
 fi
 
@@ -55,6 +65,10 @@ if ! helm install osm-db \
     exit 1
 fi
 
+if ! kubectl apply -f $basePath/init/jobs/postgis_init_job.yaml; then
+    echo "error while install postgresql"
+    exit 1
+fi
 
 # if ! kubectl run postgis-init --restart='Never' \
 #     --overrides='

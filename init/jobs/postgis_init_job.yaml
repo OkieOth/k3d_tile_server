@@ -5,9 +5,22 @@ metadata:
 spec:
   template:
     spec:
+      volumes:
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: init-pv-claim
       containers:
       - name: postgis-init-container
         image: docker.io/bitnami/postgresql:11.9.0-debian-10-r48
-        command: ["psql", "--host", "osm-db-postgresql", "-U", "postgres", "-d", "osm_db", "-p", "5432", "-f", "/init/postgis_init.sql"]
-      restartPolicy: Never
+        env:
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-user-pass
+                key: postgresql-password
+        command: ["psql", "--host", "osm-db-postgresql", "-U", "postgres", "-d", "postgres", "-p", "5432", "-f", "/init/others/postgis/postgis_init.sql"]
+        volumeMounts:
+          - mountPath: "/init"
+            name: task-pv-storage
+      restartPolicy: OnFailure
   backoffLimit: 4
