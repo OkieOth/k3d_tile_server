@@ -1,14 +1,39 @@
 #!/bin/bash
 
 scriptPos=${0%/*}
-
 basePath=`cd $scriptPos/.. && pwd`
-POSTGRES_PASSWORD=Geheim999
+
+osmDownloadLink=https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+osmImportFile=${osmDownloadLink##*/}
+
+function createDir() {
+    dirToCreate=$1
+    if ! [[ -d $dirToCreate ]]; then
+        if ! mkdir -p $dirToCreate; then
+            echo "error while create dir: $dirToCreate"
+            exit 1
+        fi
+    fi
+}
+
+# download if needed some osm test data
+pushd $scriptPos/../init/others/osm > /dev/null
+if ! [[ -f $osmImportFile ]]; then
+    if ! curl -o $osmImportFile $osmDownloadLink; then
+        echo "error while download: $osmDownloadLink"
+        popd > /dev/null
+        exit 1
+    fi
+fi
+popd > /dev/null
+
+# create if needed the directories for the persistent volumes
+createDir "$scriptPos/../tmp/postgis"
+createDir "$scriptPos/../tmp/tiles"
 
 if ! k3d cluster create "osmTest" \
     -v $basePath/tmp/postgis:/postgis \
     -v $basePath/tmp/tiles:/tiles \
-    -v $basePath/tmp/import:/import \
     -v $basePath/init:/init \
     --agents 2; then
     echo "error while create the cluster"
@@ -69,34 +94,4 @@ if ! kubectl apply -f $basePath/init/jobs/postgis_init_job.yaml; then
     echo "error while install postgresql"
     exit 1
 fi
-
-# if ! kubectl run postgis-init --restart='Never' \
-#     --overrides='
-# {
-#   "apiVersion": "v1",
-#   "spec": {
-#     "template": {
-#       "spec": {
-#         "containers": [
-#           {
-#             "volumeMounts": [{
-#               "mountPath": "/init",
-#               "name": "init"
-#             }]
-#           }
-#         ],
-#         "volumes": [{
-#           "name":"init"
-#         }]
-#       }
-#     }
-#   }
-# }
-#     '\
-#     --namespace default --image docker.io/bitnami/postgresql:11.9.0-debian-10-r48 \
-#     --env="PGPASSWORD=$POSTGRES_PASSWORD" \
-#     --command -- psql --host osm-db-postgresql -U osm_db -d osm_db -p 5432 -f /init/postgis_init.sql; then
-#     echo "error while initialize postgis for OSM"
-#     exit 1
-# fi
 
