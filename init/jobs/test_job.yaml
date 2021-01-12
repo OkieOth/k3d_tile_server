@@ -9,11 +9,16 @@ spec:
       - name: job-test-container
         image: bash
         env:
-          - name: PGPASSWORD
+          - name: POSTGRES_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: postgres-user-pass
                 key: postgresql-password
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: osm-db-user-pass
+                key: username
         args: ["printenv"]
       restartPolicy: OnFailure
   backoffLimit: 4

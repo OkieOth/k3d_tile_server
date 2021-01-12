@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-db-connect
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgis-init-container
+          image: docker.io/bitnami/postgresql:11.9.0-debian-10-r48
+          env:
+            - name: PGPASSWORD
+              value: Geheim999
+          command: ["psql", "--host", "osm-db-postgresql", "-U", "postgres", "-d", "postgres", "-p", "5432", "-c", "SELECT current_timestamp;"]
+      restartPolicy: OnFailure
+  backoffLimit: 20

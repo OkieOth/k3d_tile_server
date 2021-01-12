@@ -70,6 +70,9 @@ kubectl delete pv <pv_name> --grace-period=0 --force
 # evaluate why a pod isn't starting
 kubectl describe pod osm-db-postgresql-0
 
+# decode secret value
+kubectl get secrets/osm-db-user-pass --template={{.data.password}} | base64 -d
+
 helm create osm_stack
 cd osm_stack
 helm dependency build

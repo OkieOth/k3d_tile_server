@@ -9,18 +9,47 @@ spec:
         - name: task-pv-storage
           persistentVolumeClaim:
             claimName: init-pv-claim
+      initContainers:
+        - name: postgis-init-container
+          image: docker.io/bitnami/postgresql:11.9.0-debian-10-r48
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-user-pass
+                  key: postgresql-password
+          command: ["psql", "--host", "osm-db-postgresql", "-U", "postgres", "-d", "postgres", "-p", "5432", "-f", "/init/others/postgis/postgis_init.sql"]
+          volumeMounts:
+            - mountPath: "/init"
+              name: task-pv-storage
+        - name: import-osm-data
+          image: okieoth/osm2pgsql:1.0.0
+          resources:
+            requests:
+              memory: "5Gi"
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: osm-db-user-pass
+                  key: "password"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: osm-db-user-pass
+                  key: username
+            - name: POSTGRES_DB
+              value: osm_db
+            - name: POSTGRES_HOST
+              value: osm-db-postgresql
+            - name: IMPORT_FILE
+              value: /init/others/osm/berlin-latest.osm.pbf
+          volumeMounts:
+            - mountPath: "/init"
+              name: task-pv-storage
       containers:
-      - name: postgis-init-container
-        image: docker.io/bitnami/postgresql:11.9.0-debian-10-r48
-        env:
-          - name: PGPASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: postgres-user-pass
-                key: postgresql-password
-        command: ["psql", "--host", "osm-db-postgresql", "-U", "postgres", "-d", "postgres", "-p", "5432", "-f", "/init/others/postgis/postgis_init.sql"]
-        volumeMounts:
-          - mountPath: "/init"
-            name: task-pv-storage
+        - name: job-done
+          image: busybox
+          command: ['sh', '-c', 'echo "postgis_init and osm-import are completed"']
       restartPolicy: OnFailure
-  backoffLimit: 4
+  backoffLimit: 20
