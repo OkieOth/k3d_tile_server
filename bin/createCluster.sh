@@ -59,8 +59,8 @@ fi
 
 # create the local cluster
 if ! k3d cluster create "osmTest" \
-    --env HTTP_PROXY=http://192.168.178.26:3128 \
-    --env HTTPS_PROXY=http://192.168.178.26:3128 \
+    --env HTTP_PROXY=http://host.k3d.internal:3128 \
+    --env HTTPS_PROXY=http://host.k3d.internal:3128 \
     --env SSL_CERT_DIR=/usr/share/ca-certificates \
     -v $basePath/tmp/postgis:/postgis \
     -v $basePath/tmp/tiles:/tiles \
