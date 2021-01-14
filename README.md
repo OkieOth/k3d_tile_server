@@ -9,7 +9,12 @@
 mkdir -p tmp/postgis
 mkdir -p tmp/tiles
 mkdir -p tmp/import
+mkdir -p tmp/dockerMirrorCache
+mkdir -p tmp/dockerMirrorCerts
 ```
+
+## Provide a docker registry proxy
+
 
 ## Create a fresh k3d cluster
 We create a fresh cluster and mount three additional directories into it. The three directories
@@ -44,7 +49,7 @@ kubectl get pv --all-namespaces
 kubectl get pvc --all-namespaces
 ```
 
-## Install Postgis
+## Install Postgresql
 (documentation reference: https://github.com/bitnami/charts/tree/master/bitnami/postgresql)
 
 * persistence.existingClaim
@@ -56,6 +61,13 @@ helm install osm-db \
     -f init/others/postgis/bitnami_postgis_values.yaml \
     bitnami/postgresql
 ```
+
+## Install a job that initialize Postgis and import the OSM data
+```bash
+kubectl apply -f $basePath/init/jobs/postgis_init_job.yaml
+```
+
+
 
 ### Play around with Postgis
 ```bash

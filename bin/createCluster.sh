@@ -30,15 +30,50 @@ popd > /dev/null
 # create if needed the directories for the persistent volumes
 createDir "$scriptPos/../tmp/postgis"
 createDir "$scriptPos/../tmp/tiles"
+createDir "$scriptPos/../tmp/dockerMirrorCache"
+createDir "$scriptPos/../tmp/dockerMirrorCerts"
 
+if [[ -z "$DOCKERHUB_USER" ]]; then
+    echo "DOCKERHUB_USER not given, please configure env var"
+    exit 1
+fi
+
+if [[ -z "$DOCKERHUB_PASSWORD" ]]; then
+    echo "DOCKERHUB_PASSWORD not given, please configure env var"
+    exit 1
+fi
+
+# start a local docker repository proxy
+if ! netstat -nat | grep 3128; then
+    echo "starting docker registry proxy ..."
+    docker run --rm --name docker_registry_proxy -it \
+        -p 0.0.0.0:3128:3128 \
+        -v $basePath/tmp/dockerMirrorCache:/docker_mirror_cache \
+        -v $basePath/tmp/dockerMirrorCerts:/ca \
+        -e REGISTRIES="k8s.gcr.io gcr.io quay.io" \
+        -e AUTH_REGISTRIES="auth.docker.io:$DOCKERHUB_USER:$DOCKERHUB_PASSWORD" \
+        rpardini/docker-registry-proxy:0.6.1
+else
+    echo "it seems the docker registry proxy is already started."
+fi
+
+# create the local cluster
 if ! k3d cluster create "osmTest" \
+    --env HTTP_PROXY=http://192.168.178.26:3128 \
+    --env HTTPS_PROXY=http://192.168.178.26:3128 \
+    --env SSL_CERT_DIR=/usr/share/ca-certificates \
     -v $basePath/tmp/postgis:/postgis \
     -v $basePath/tmp/tiles:/tiles \
     -v $basePath/init:/init \
+    -v $basePath/tmp/dockerMirrorCerts:/usr/share/ca-certificates \
     --agents 2; then
     echo "error while create the cluster"
     exit 1
 fi
+
+#    -v $basePath/init/registries/registries.yaml:/etc/rancher/k3s/registries.yaml \
+#    -v $basePath/tmp/dockerMirrorCerts/ca.crt:/usr/share/ca-certificates/local.docker.proxy.crt \
+
 
 if ! kubectl apply -f $basePath/init/pv/postgis_pv.yaml; then
     echo "error while create postgis volume"
