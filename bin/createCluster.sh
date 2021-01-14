@@ -16,6 +16,13 @@ function createDir() {
     fi
 }
 
+# create if needed the directories for the persistent volumes
+createDir "$scriptPos/../tmp/postgis"
+createDir "$scriptPos/../tmp/tiles"
+createDir "$scriptPos/../tmp/helm"
+createDir "$scriptPos/../tmp/dockerMirrorCache"
+createDir "$scriptPos/../tmp/dockerMirrorCerts"
+
 # download if needed some osm test data
 pushd $scriptPos/../init/others/osm > /dev/null
 if ! [[ -f $osmImportFile ]]; then
@@ -27,11 +34,16 @@ if ! [[ -f $osmImportFile ]]; then
 fi
 popd > /dev/null
 
-# create if needed the directories for the persistent volumes
-createDir "$scriptPos/../tmp/postgis"
-createDir "$scriptPos/../tmp/tiles"
-createDir "$scriptPos/../tmp/dockerMirrorCache"
-createDir "$scriptPos/../tmp/dockerMirrorCerts"
+# download the bitname postgresql helm
+if ! [[ -d "$scriptPos/../tmp/helm/postgresql" ]]; then
+    pushd $scriptPos/../tmp/helm > /dev/null
+    if ! helm pull bitnami/postgresql --untar; then
+        echo "error while download bitnami/postgresql: $osmDownloadLink"
+        popd > /dev/null
+        exit 1
+    fi
+    popd > /dev/null
+fi
 
 if [[ -z "$DOCKERHUB_USER" ]]; then
     echo "DOCKERHUB_USER not given, please configure env var"
@@ -46,10 +58,11 @@ fi
 # start a local docker repository proxy
 if ! netstat -nat | grep 3128; then
     echo "starting docker registry proxy ..."
-    docker run --rm --name docker_registry_proxy -it \
+    docker run --rm --name docker_registry_proxy -d \
         -p 0.0.0.0:3128:3128 \
         -v $basePath/tmp/dockerMirrorCache:/docker_mirror_cache \
         -v $basePath/tmp/dockerMirrorCerts:/ca \
+        -e ENABLE_MANIFEST_CACHE=true \
         -e REGISTRIES="k8s.gcr.io gcr.io quay.io" \
         -e AUTH_REGISTRIES="auth.docker.io:$DOCKERHUB_USER:$DOCKERHUB_PASSWORD" \
         rpardini/docker-registry-proxy:0.6.1
@@ -118,11 +131,23 @@ if ! kubectl create secret generic osm-db-user-pass \
     exit 1
 fi
 
-if ! helm install osm-db \
-    -f $basePath/init/others/postgis/bitnami_postgis_values.yaml \
-    bitnami/postgresql; then
-    echo "error while install postgresql"
-    exit 1
+
+if [[ -z "$USE_CACHE" ]]; then
+    # var LOCAL_INSTALL isn't set, so common installation over the network
+    if ! helm install osm-db \
+        -f $basePath/init/others/postgis/bitnami_postgis_values.yaml \
+        bitnami/postgresql; then
+        echo "error while install postgresql"
+        exit 1
+    fi
+else
+    # installation from a previous downloaded bitnami helm
+    if ! helm install osm-db \
+        -f $basePath/init/others/postgis/bitnami_postgis_values.yaml \
+        $scriptPos/../tmp/helm/postgresql; then
+        echo "error while install postgresql"
+        exit 1
+    fi
 fi
 
 if ! kubectl apply -f $basePath/init/jobs/postgis_init_job.yaml; then

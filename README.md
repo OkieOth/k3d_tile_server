@@ -1,10 +1,28 @@
-# Requirement
+# TL;DR
+Setup a initialized OSM tile-server stack into k3d
+
+```bash
+# install cluster
+./bin/createCluster.sh
+
+# delete initialised database
+sudo rm -rf ./tmp/postgis/data
+
+# install cluster
+# disconnect machine from the Internet
+./bin/createClusterFromCache.sh
+```
+
+Still work in progress next step is the Ingres configuration
+
+# Some more details
+## Requirement
 * Installed k3d
 * Installed kubectl
 * Installed helm
 
-# Steps to setup
-## Prepare the file system
+## Steps to setup
+### Prepare the file system
 ```bash
 mkdir -p tmp/postgis
 mkdir -p tmp/tiles
@@ -13,10 +31,10 @@ mkdir -p tmp/dockerMirrorCache
 mkdir -p tmp/dockerMirrorCerts
 ```
 
-## Provide a docker registry proxy
+### Provide a docker registry proxy
 
 
-## Create a fresh k3d cluster
+### Create a fresh k3d cluster
 We create a fresh cluster and mount three additional directories into it. The three directories
 are later used to serialize the postgis data, to store the rendered tiles and to take a initial data for the import.
 
@@ -28,7 +46,7 @@ k3d cluster create "osmTest" \
     --agents 2
 ```
 
-## Provide host directories as volumes for persistence
+### Provide host directories as volumes for persistence
 ```bash
 # create the volumes
 # Attention, this is wrong because k8 is running inside a docker container and therefor the
@@ -49,7 +67,7 @@ kubectl get pv --all-namespaces
 kubectl get pvc --all-namespaces
 ```
 
-## Install Postgresql
+### Install Postgresql
 (documentation reference: https://github.com/bitnami/charts/tree/master/bitnami/postgresql)
 
 * persistence.existingClaim
@@ -62,19 +80,19 @@ helm install osm-db \
     bitnami/postgresql
 ```
 
-## Install a job that initialize Postgis and import the OSM data
+### Install a job that initialize Postgis and import the OSM data
 ```bash
 kubectl apply -f $basePath/init/jobs/postgis_init_job.yaml
 ```
 
 
 
-### Play around with Postgis
+#### Play around with Postgis
 ```bash
 kubectl run osm-db-postgresql-client --rm -it --restart='Never' --namespace default --image docker.io/bitnami/postgresql:11.9.0-debian-10-r48 --env="PGPASSWORD=$POSTGRES_PASSWORD" --command -- psql --host osm-db-postgresql -U osm_db -d osm_db -p 5432
 ```
 
-# Other useful commands
+## Other useful commands
 ```bash
 # delete persistent volume
 kubectl delete pv <pv_name> --grace-period=0 --force
